@@ -2,16 +2,21 @@ package main
 
 import (
     "github.com/codegangsta/martini"
+    "github.com/martini-contrib/cors"
     "github.com/codegangsta/martini-contrib/render"
     "path/filepath"
     "regexp"
-    "fmt"
     "os"
 )
 
 func main() {
     m := martini.Classic()
     m.Use(martini.Static("."))
+    m.Use(cors.Allow(&cors.Options{
+        AllowOrigins:     []string{"http://*"},
+        AllowMethods:     []string{"GET"},
+        AllowHeaders:     []string{"Origin"},
+    }))
     m.Use(render.Renderer(render.Options{
         Layout:     "layout",
         Delims: render.Delims{"{[{", "}]}"},
@@ -30,7 +35,6 @@ func ClosureHackage(payload *Payload) func(s string, f os.FileInfo, err error) e
         re := regexp.MustCompile(`\.mp3$`)
         if match := re.FindString(path); match != "" {
             payload.Songs = append(payload.Songs, path)
-            fmt.Println(path[6:])
         }
         return nil
     }
