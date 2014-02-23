@@ -18,10 +18,7 @@ func main() {
         AllowMethods:     []string{"GET"},
         AllowHeaders:     []string{"Origin"},
     }))
-    m.Use(render.Renderer(render.Options{
-        Layout:     "layout",
-        Delims: render.Delims{"{[{", "}]}"},
-        Extensions: []string{".html"}}))
+    m.Use(render.Renderer())
 
     m.Get("/", func(r render.Render) {
         songs := Songs()
