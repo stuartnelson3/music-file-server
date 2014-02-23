@@ -21,6 +21,8 @@ func main() {
     m.Use(render.Renderer())
 
     m.Get("/", func(r render.Render) {
+        // consider moving songs outside of each get request so that the server
+        // caches the songs found initially
         songs := Songs()
         r.JSON(200, songs)
     })
