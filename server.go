@@ -11,7 +11,7 @@ import (
 
 func main() {
     m := martini.Classic()
-    m.Use(martini.Static("songs"))
+    m.Use(martini.Static("."))
     m.Use(render.Renderer(render.Options{
         Layout:     "layout",
         Delims: render.Delims{"{[{", "}]}"},
