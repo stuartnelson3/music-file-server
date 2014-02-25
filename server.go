@@ -20,10 +20,8 @@ func main() {
     }))
     m.Use(render.Renderer())
 
+    songs := Songs()
     m.Get("/", func(r render.Render) {
-        // consider moving songs outside of each get request so that the server
-        // caches the songs found initially
-        songs := Songs()
         r.JSON(200, songs)
     })
 
@@ -35,6 +33,7 @@ func ClosureHackage(payload *Payload) func(s string, f os.FileInfo, err error) e
         re := regexp.MustCompile(`\.(mp3|m4a)$`)
         if match := re.FindString(path); match != "" {
             f, _ := taglib.Read(path)
+            defer f.Close()
             song := Song{}
             song.Name = f.Title()
             song.Artist = f.Artist()
