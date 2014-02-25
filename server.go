@@ -4,7 +4,7 @@ import (
     "github.com/codegangsta/martini"
     "github.com/martini-contrib/cors"
     "github.com/codegangsta/martini-contrib/render"
-    "github.com/ascherkus/go-id3/src/id3"
+    "github.com/wtolson/go-taglib"
     "path/filepath"
     "regexp"
     "os"
@@ -34,17 +34,16 @@ func ClosureHackage(payload *Payload) func(s string, f os.FileInfo, err error) e
     return func(path string, f os.FileInfo, err error) error {
         re := regexp.MustCompile(`\.(mp3|m4a)$`)
         if match := re.FindString(path); match != "" {
-            metadata := id3.File{}
-            if match == ".mp3" {
-                mp3File, err := os.Open(path)
-                if err != nil {
-                    return err
-                }
-                metadata = *id3.Read(mp3File)
-            } else {
-                metadata.Name = path
-            }
-            song := Song{Metadata: metadata, Path: "/" + path}
+            f, _ := taglib.Read(path)
+            song := Song{}
+            song.Name = f.Title()
+            song.Artist = f.Artist()
+            song.Album = f.Album()
+            song.Year = f.Year()
+            song.Track = f.Track()
+            song.Genre = f.Genre()
+            song.Length = int(f.Length().Seconds())
+            song.Path = "/" + path
             payload.Songs = append(payload.Songs, song)
         }
         return nil
@@ -64,6 +63,12 @@ type Payload struct {
 }
 
 type Song struct {
-    Metadata id3.File
+    Name string
+    Artist string
+    Album string
+    Year int
+    Track int
+    Genre string
+    Length int
     Path string
 }
