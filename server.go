@@ -32,13 +32,18 @@ func main() {
 
 func ClosureHackage(payload *Payload) func(s string, f os.FileInfo, err error) error {
     return func(path string, f os.FileInfo, err error) error {
-        re := regexp.MustCompile(`\.mp3$`)
+        re := regexp.MustCompile(`\.(mp3|m4a)$`)
         if match := re.FindString(path); match != "" {
-            mp3File, err := os.Open(path)
-            if err != nil {
-                return err
+            metadata := id3.File{}
+            if match == ".mp3" {
+                mp3File, err := os.Open(path)
+                if err != nil {
+                    return err
+                }
+                metadata = *id3.Read(mp3File)
+            } else {
+                metadata.Name = path
             }
-            metadata := *id3.Read(mp3File)
             song := Song{Metadata: metadata, Path: "/" + path}
             payload.Songs = append(payload.Songs, song)
         }
