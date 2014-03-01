@@ -5,7 +5,9 @@ import (
     "github.com/martini-contrib/cors"
     "github.com/codegangsta/martini-contrib/render"
     "github.com/wtolson/go-taglib"
+    "encoding/json"
     "path/filepath"
+    "net/http"
     "regexp"
     "os"
 )
@@ -20,15 +22,38 @@ func main() {
     }))
     m.Use(render.Renderer())
 
-    songs := Songs()
     m.Get("/", func(r render.Render) {
         r.JSON(200, songs)
+    })
+
+    m.Get("/search", func(w http.ResponseWriter, r *http.Request) {
+        search := r.FormValue("search")
+        matches := QuerySongs(search)
+        enc := json.NewEncoder(w)
+        enc.Encode(matches)
     })
 
     m.Run()
 }
 
-func ClosureHackage(payload *Payload) func(s string, f os.FileInfo, err error) error {
+func QuerySongs(search string) []Song {
+    matches := make([]Song, 0)
+    if search == "" {
+        return matches
+    }
+    for _, song := range songs {
+        s := []string{song.Name, song.Artist, song.Album, song.Genre}
+        for _, attr := range s {
+            if match, _ := regexp.MatchString(search, attr); match {
+                matches = append(matches, song)
+                break
+            }
+        }
+    }
+    return matches
+}
+
+func ClosureHackage(songs *[]Song) func(s string, f os.FileInfo, err error) error {
     return func(path string, f os.FileInfo, err error) error {
         re := regexp.MustCompile(`\.(mp3|m4a)$`)
         if match := re.FindString(path); match != "" {
@@ -43,22 +68,18 @@ func ClosureHackage(payload *Payload) func(s string, f os.FileInfo, err error) e
             song.Genre = f.Genre()
             song.Length = int(f.Length().Seconds())
             song.Path = "/" + path
-            payload.Songs = append(payload.Songs, song)
+            *songs = append(*songs, song)
         }
         return nil
     }
 }
 
-func Songs() Payload {
+var songs = Songs()
+func Songs() []Song {
     songs := make([]Song, 0)
-    payload := Payload{Songs: songs}
-    FindMp3s := ClosureHackage(&payload)
+    FindMp3s := ClosureHackage(&songs)
     filepath.Walk(".", FindMp3s)
-    return payload
-}
-
-type Payload struct {
-    Songs []Song
+    return songs
 }
 
 type Song struct {
