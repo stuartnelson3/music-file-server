@@ -41,6 +41,32 @@ func QuerySongs(search string) []Song {
     if search == "" {
         return matches
     }
+    splitSongs := splitSlice(songs)
+    results := make(chan []Song, len(splitSongs))
+    defer close(results)
+    for i := 0; i < len(splitSongs); i++ {
+        go matchesInSongSlice(splitSongs[i], search, results)
+    }
+    // should this be used for the timeout?
+    // for {
+    //     var done bool
+    //     select {
+    //     case songs := <-results:
+    //         matches = append(matches, songs...)
+    //     case <-time.After(time.Second):
+    //         done = true
+    //     }
+    //     if done { break }
+    // }
+    for i := 0; i < len(splitSongs); i++ {
+        songs := <-results
+        matches = append(matches, songs...)
+    }
+    return matches
+}
+
+func matchesInSongSlice(songs []Song, search string, results chan []Song) {
+    matches := make([]Song, 0)
     for _, song := range songs {
         s := []string{song.Name, song.Artist, song.Album, song.Genre}
         for _, attr := range s {
@@ -50,7 +76,25 @@ func QuerySongs(search string) []Song {
             }
         }
     }
-    return matches
+    results<- matches
+}
+
+func splitSlice(songs []Song) [][]Song {
+    n := 1
+    l := len(songs)
+    for i := 2; i < 13; i++ {
+        if l % i == 0 {
+            n = i
+        }
+    }
+    splitSlices := make([][]Song, 0)
+    for i := 0; i < n; i++ {
+        chunk := len(songs)/n
+        start := i*chunk
+        finish := (i+1)*chunk
+        splitSlices = append(splitSlices, songs[start:finish])
+    }
+    return splitSlices
 }
 
 func ClosureHackage(songs *[]Song) func(s string, f os.FileInfo, err error) error {
