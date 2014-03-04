@@ -114,7 +114,11 @@ func ClosureHackage(songs *[]Song) func(s string, f os.FileInfo, err error) erro
             song.Genre = f.Genre()
             song.Length = int(f.Length().Seconds())
             ip, _ := localIP()
-            song.Url = "http://" + ip.String() + ":" + os.Getenv("PORT") + "/" + path
+            port := "3000"
+            if envPort := os.Getenv("PORT"); envPort != "" {
+                port = envPort
+            }
+            song.Url = "http://" + ip.String() + ":" + port + "/" + path
             *songs = append(*songs, song)
         }
         return nil
