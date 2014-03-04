@@ -155,12 +155,12 @@ func Songs() []Song {
 }
 
 type Song struct {
-    Name string
-    Artist string
-    Album string
-    Year int
-    Track int
-    Genre string
-    Length int
-    Url string
+    Name   string `json:"name"`
+    Artist string `json:"artist"`
+    Album  string `json:"album"`
+    Year   int    `json:"year"`
+    Track  int    `json:"track"`
+    Genre  string `json:"genre"`
+    Length int    `json:"length"`
+    Url    string `json:"url"`
 }
