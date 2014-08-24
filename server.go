@@ -48,17 +48,6 @@ func QuerySongs(search string) []Song {
 	for i := 0; i < len(splitSongs); i++ {
 		go matchesInSongSlice(splitSongs[i], search, results)
 	}
-	// should this be used for the timeout?
-	// for {
-	//     var done bool
-	//     select {
-	//     case songs := <-results:
-	//         matches = append(matches, songs...)
-	//     case <-time.After(time.Second):
-	//         done = true
-	//     }
-	//     if done { break }
-	// }
 	for i := 0; i < len(splitSongs); i++ {
 		songs := <-results
 		matches = append(matches, songs...)
