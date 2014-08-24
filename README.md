@@ -1,4 +1,9 @@
-mp3 file server
+mp3 file server.
+
+## dependencies
+
+taglib: http://taglib.github.io/
+if you're on osx, `$ brew install taglib` should get you going.
 
 ## usage
 clone the repo and then build the binary
