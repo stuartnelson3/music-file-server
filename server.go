@@ -3,59 +3,60 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"flag"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 
-	"github.com/codegangsta/martini"
-	"github.com/codegangsta/martini-contrib/render"
-	"github.com/martini-contrib/cors"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/pat"
 	"github.com/wtolson/go-taglib"
 )
 
+var (
+	mux   = pat.New()
+	port  = flag.String("p", "3000", "address to bind the server on")
+	songs []Song
+)
+
 func main() {
-	m := martini.Classic()
-	m.Use(martini.Static("."))
-	m.Use(cors.Allow(&cors.Options{
-		AllowOrigins: []string{"http://*", "https://*"},
-		AllowMethods: []string{"GET"},
-		AllowHeaders: []string{"Origin"},
-	}))
-	m.Use(render.Renderer())
+	flag.Parse()
 
-	m.Get("/", func(r render.Render) {
-		r.JSON(200, songs)
-	})
+	songs = allSongs()
 
-	m.Get("/search", func(w http.ResponseWriter, r *http.Request) {
-		matches := QuerySongs(r.FormValue("search"))
+	mux.Get("/search", corsHandler(func(w http.ResponseWriter, r *http.Request) {
+		matches := querySongs(r.FormValue("search"))
 		json.NewEncoder(w).Encode(matches)
-	})
+	}))
 
-	m.Run()
+	mux.Get("/", corsHandler(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, r.URL.Path[1:])
+	}))
+
+	handler := handlers.LoggingHandler(os.Stdout, mux)
+	log.Printf("listening on %s", *port)
+	log.Fatal(http.ListenAndServe(":"+*port, handler))
 }
 
-func QuerySongs(search string) []Song {
-	matches := make([]Song, 0)
+func corsHandler(fn func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		fn(w, r)
+	}
+}
+
+func querySongs(search string) []Song {
 	if search == "" {
+		matches := make([]Song, 0)
 		return matches
 	}
-	splitSongs := splitSlice(songs)
-	results := make(chan []Song, len(splitSongs))
-	defer close(results)
-	for i := 0; i < len(splitSongs); i++ {
-		go matchesInSongSlice(splitSongs[i], search, results)
-	}
-	for i := 0; i < len(splitSongs); i++ {
-		songs := <-results
-		matches = append(matches, songs...)
-	}
-	return matches
+	return matchesInSongSlice(songs, search)
 }
 
-func matchesInSongSlice(songs []Song, search string, results chan []Song) {
+func matchesInSongSlice(songs []Song, search string) []Song {
 	matches := make([]Song, 0)
 	for _, song := range songs {
 		s := []string{song.Name, song.Artist, song.Album, song.Genre}
@@ -66,47 +67,26 @@ func matchesInSongSlice(songs []Song, search string, results chan []Song) {
 			}
 		}
 	}
-	results <- matches
+	return matches
 }
 
-func splitSlice(songs []Song) [][]Song {
-	n := 1
-	l := len(songs)
-	for i := 2; i < 13; i++ {
-		if l%i == 0 {
-			n = i
-		}
-	}
-	splitSlices := make([][]Song, 0)
-	for i := 0; i < n; i++ {
-		chunk := len(songs) / n
-		start := i * chunk
-		finish := (i + 1) * chunk
-		splitSlices = append(splitSlices, songs[start:finish])
-	}
-	return splitSlices
-}
-
-func ClosureHackage(songs *[]Song) func(s string, f os.FileInfo, err error) error {
+func closure(songs *[]Song) func(s string, f os.FileInfo, err error) error {
 	return func(path string, f os.FileInfo, err error) error {
 		re := regexp.MustCompile(`\.(mp3|m4a)$`)
 		if match := re.FindString(path); match != "" {
 			f, _ := taglib.Read(path)
 			defer f.Close()
-			song := Song{}
-			song.Name = f.Title()
-			song.Artist = f.Artist()
-			song.Album = f.Album()
-			song.Year = f.Year()
-			song.Track = f.Track()
-			song.Genre = f.Genre()
-			song.Length = int(f.Length().Seconds())
 			ip, _ := localIP()
-			port := "3000"
-			if envPort := os.Getenv("PORT"); envPort != "" {
-				port = envPort
+			song := Song{
+				Name:   f.Title(),
+				Artist: f.Artist(),
+				Album:  f.Album(),
+				Year:   f.Year(),
+				Track:  f.Track(),
+				Genre:  f.Genre(),
+				Length: int(f.Length().Seconds()),
+				Url:    "http://" + ip.String() + ":" + *port + "/" + path,
 			}
-			song.Url = "http://" + ip.String() + ":" + port + "/" + path
 			*songs = append(*songs, song)
 		}
 		return nil
@@ -138,11 +118,9 @@ func localIP() (net.IP, error) {
 	return nil, errors.New("cannot find local IP address")
 }
 
-var songs = Songs()
-
-func Songs() []Song {
+func allSongs() []Song {
 	songs := make([]Song, 0)
-	FindMp3s := ClosureHackage(&songs)
+	FindMp3s := closure(&songs)
 	filepath.Walk(".", FindMp3s)
 	return songs
 }
