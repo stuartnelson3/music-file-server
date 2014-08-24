@@ -49,15 +49,10 @@ func corsHandler(fn func(http.ResponseWriter, *http.Request)) func(http.Response
 }
 
 func querySongs(search string) []Song {
+	matches := make([]Song, 0)
 	if search == "" {
-		matches := make([]Song, 0)
 		return matches
 	}
-	return matchesInSongSlice(songs, search)
-}
-
-func matchesInSongSlice(songs []Song, search string) []Song {
-	matches := make([]Song, 0)
 	for _, song := range songs {
 		s := []string{song.Name, song.Artist, song.Album, song.Genre}
 		for _, attr := range s {
@@ -120,8 +115,8 @@ func localIP() (net.IP, error) {
 
 func allSongs() []Song {
 	songs := make([]Song, 0)
-	FindMp3s := closure(&songs)
-	filepath.Walk(".", FindMp3s)
+	findMp3s := closure(&songs)
+	filepath.Walk(".", findMp3s)
 	return songs
 }
 
