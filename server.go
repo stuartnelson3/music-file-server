@@ -30,10 +30,8 @@ func main() {
 	})
 
 	m.Get("/search", func(w http.ResponseWriter, r *http.Request) {
-		search := r.FormValue("search")
-		matches := QuerySongs(search)
-		enc := json.NewEncoder(w)
-		enc.Encode(matches)
+		matches := QuerySongs(r.FormValue("search"))
+		json.NewEncoder(w).Encode(matches)
 	})
 
 	m.Run()
