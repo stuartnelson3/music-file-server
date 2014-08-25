@@ -41,7 +41,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+*port, handler))
 }
 
-func corsHandler(fn func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func corsHandler(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", "*")
 		fn(w, r)
