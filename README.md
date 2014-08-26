@@ -14,3 +14,7 @@ $ go build
 go to the folder that has mp3s and run the binary. the music server will walk
 through the root and all child directories looking for mp3s and serve them up,
 so be careful of where you run the binary.
+
+
+## bonus
+run [ngrok](https://github.com/inconshreveable/ngrok) on your machine to make your mp3s available on the www
